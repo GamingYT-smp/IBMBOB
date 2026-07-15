@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Social Media AI Agent — IBM Watsonx</title>
+<style>
+  /* ── Reset & Variables ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:          #0d0f14;
+    --bg2:         #13161e;
+    --bg3:         #1a1e2a;
+    --surface:     #1e2333;
+    --surface2:    #252a3a;
+    --border:      rgba(255,255,255,0.07);
+    --border2:     rgba(255,255,255,0.12);
+    --text:        #e8eaf0;
+    --text2:       #9aa0b4;
+    --text3:       #5f6680;
+    --accent:      #5b8dee;
+    --accent2:     #7c5cd8;
+    --accent3:     #3ecfcf;
+    --green:       #34d17a;
+    --red:         #ff5c7a;
+    --orange:      #f0a742;
+    --yellow:      #f5d547;
+    --grad:        linear-gradient(135deg, #5b8dee, #7c5cd8);
+    --grad2:       linear-gradient(135deg, #3ecfcf, #5b8dee);
+    --glass:       rgba(30,35,51,0.7);
+    --radius:      14px;
+    --radius-sm:   8px;
+    --sidebar-w:   290px;
+    --transition:  0.25s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  html { font-size: 14px; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 99px; }
+
+  /* ── Layout ── */
+  .app { display: flex; height: 100vh; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width var(--transition), min-width var(--transition), transform var(--transition);
+    z-index: 100;
+  }
+  .sidebar.collapsed { width: 0; min-width: 0; }
+
+  .sidebar-inner { width: var(--sidebar-w); height: 100%; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+
+  /* Logo */
+  .logo-area {
+    padding: 20px 18px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--grad);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .logo-text { line-height: 1.2; }
+  .logo-text .title { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: 0.3px; }
+  .logo-text .sub   { font-size: 10px; color: var(--text3); letter-spacing: 0.5px; text-transform: uppercase; }
+
+  /* Sidebar sections */
+  .sb-section { padding: 14px 14px 6px; flex-shrink: 0; }
+  .sb-label { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; padding: 0 4px; }
+
+  /* API Config */
+  .api-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    margin-bottom: 6px;
+  }
+  .api-card label { font-size: 11px; color: var(--text2); display: block; margin-bottom: 4px; }
+  .api-card input, .api-card select {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 7px 9px;
+    font-size: 12px;
+    outline: none;
+    margin-bottom: 8px;
+    transition: border var(--transition);
+  }
+  .api-card input:focus, .api-card select:focus { border-color: var(--accent); }
+  .api-card input::placeholder { color: var(--text3); }
+  .api-card select option { background: var(--bg3); }
+
+  .btn-save {
+    width: 100%;
+    background: var(--grad);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    padding: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity var(--transition);
+  }
+  .btn-save:hover { opacity: 0.85; }
+
+  /* Platform pills */
+  .platform-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .plat-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text2);
+    padding: 7px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
+    transition: all var(--transition);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .plat-btn .icon { font-size: 14px; flex-shrink: 0; }
+  .plat-btn:hover  { border-color: var(--accent); color: var(--accent); }
+  .plat-btn.active { background: rgba(91,141,238,0.15); border-color: var(--accent); color: var(--accent); }
+  .plat-btn.active-x         { background: rgba(255,255,255,0.06); border-color: #fff; color: #fff; }
+  .plat-btn.active-linkedin  { background: rgba(10,102,194,0.2);  border-color: #0a66c2; color: #5aacf5; }
+  .plat-btn.active-instagram { background: rgba(228,64,95,0.15);  border-color: #e4405f; color: #f07090; }
+  .plat-btn.active-facebook  { background: rgba(24,119,242,0.15); border-color: #1877f2; color: #60a0ff; }
+
+  /* Quick prompts */
+  .quick-prompts { display: flex; flex-direction: column; gap: 5px; }
+  .qp-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text2);
+    padding: 8px 10px;
+    font-size: 11.5px;
+    text-align: left;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex; align-items: center; gap: 7px;
+    line-height: 1.3;
+  }
+  .qp-btn:hover { background: var(--surface2); border-color: var(--accent); color: var(--text); }
+  .qp-btn .qp-icon { font-size: 13px; flex-shrink: 0; }
+
+  /* Sidebar actions */
+  .sb-actions { padding: 10px 14px 14px; margin-top: auto; border-top: 1px solid var(--border); flex-shrink: 0; }
+  .btn-new-chat {
+    width: 100%;
+    background: var(--grad);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: #fff;
+    padding: 9px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: opacity var(--transition);
+    margin-bottom: 6px;
+  }
+  .btn-new-chat:hover { opacity: 0.85; }
+  .btn-clear {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text2);
+    padding: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .btn-clear:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── Main Content ── */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Top Bar */
+  .topbar {
+    height: 54px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .btn-toggle-sidebar {
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text2);
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all var(--transition);
+    flex-shrink: 0;
+  }
+  .btn-toggle-sidebar:hover { color: var(--accent); border-color: var(--accent); }
+
+  .topbar-title { font-size: 14px; font-weight: 700; color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .topbar-meta { display: flex; align-items: center; gap: 8px; }
+  .meta-badge {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--text2);
+    white-space: nowrap;
+  }
+  .meta-badge span { color: var(--accent); font-weight: 600; }
+
+  .topbar-status { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text3); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); flex-shrink: 0; }
+  .status-dot.offline { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+  /* Tab bar */
+  .tab-bar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text3);
+    padding: 10px 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all var(--transition);
+    white-space: nowrap;
+  }
+  .tab-btn:hover  { color: var(--text2); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* Tab panels */
+  .tab-panel { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+  .tab-panel.active { display: flex; }
+
+  /* ── CHAT PANEL ── */
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* Welcome */
+  .welcome-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    text-align: center;
+    max-width: 560px;
+    margin: 20px auto 0;
+    animation: fadeUp 0.5s ease;
+  }
+  .welcome-icon { font-size: 40px; margin-bottom: 10px; }
+  .welcome-card h2 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .welcome-card p  { font-size: 12.5px; color: var(--text2); line-height: 1.7; }
+  .welcome-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 14px; }
+  .chip {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 99px;
+    color: var(--text2);
+    padding: 5px 12px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .chip:hover { background: rgba(91,141,238,0.15); border-color: var(--accent); color: var(--accent); }
+
+  /* Messages */
+  .msg {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    animation: fadeUp 0.3s ease;
+    max-width: 820px;
+  }
+  .msg.user { flex-direction: row-reverse; margin-left: auto; }
+  .msg.user .msg-bubble { background: var(--grad); color: #fff; border-radius: 16px 4px 16px 16px; }
+  .msg.assistant .msg-bubble { background: var(--surface); border: 1px solid var(--border); border-radius: 4px 16px 16px 16px; }
+
+  .msg-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .msg.user .msg-avatar      { background: var(--grad); }
+  .msg.assistant .msg-avatar { background: var(--surface2); border: 1px solid var(--border2); }
+
+  .msg-content { display: flex; flex-direction: column; gap: 4px; max-width: calc(100% - 44px); }
+  .msg-meta { display: flex; align-items: center; gap: 8px; font-size: 10.5px; color: var(--text3); }
+  .msg.user .msg-meta { justify-content: flex-end; }
+  .msg-bubble { padding: 11px 14px; font-size: 13px; line-height: 1.65; word-break: break-word; }
+  .msg-bubble pre {
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    font-size: 12px;
+    margin: 8px 0;
+    font-family: "Cascadia Code", "Fira Code", monospace;
+  }
+  .msg-bubble code { font-family: "Cascadia Code", "Fira Code", monospace; font-size: 12px; background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 4px; }
+  .msg-bubble ul, .msg-bubble ol { padding-left: 18px; margin: 6px 0; }
+  .msg-bubble li { margin: 3px 0; }
+  .msg-bubble strong { font-weight: 700; }
+  .msg-bubble h3 { font-size: 13.5px; font-weight: 700; margin: 8px 0 4px; }
+
+  .msg-actions { display: flex; gap: 6px; opacity: 0; transition: opacity var(--transition); }
+  .msg:hover .msg-actions { opacity: 1; }
+  .msg-action-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text3);
+    padding: 3px 7px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .msg-action-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* Typing indicator */
+  .typing-indicator {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    animation: fadeUp 0.3s ease;
+  }
+  .typing-dots { display: flex; align-items: center; gap: 4px; padding: 13px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px 16px 16px 16px; }
+  .typing-dots span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text3);
+    animation: bounce 1.2s infinite ease-in-out;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  /* Input area */
+  .input-area {
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 12px 16px 14px;
+    flex-shrink: 0;
+  }
+
+  .input-toolbar { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .tool-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text2);
+    padding: 5px 9px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+    transition: all var(--transition);
+    white-space: nowrap;
+  }
+  .tool-btn:hover  { border-color: var(--accent); color: var(--accent); }
+  .tool-btn.active { background: rgba(91,141,238,0.15); border-color: var(--accent); color: var(--accent); }
+  .tool-btn .icon { font-size: 13px; }
+
+  .input-row { display: flex; gap: 8px; align-items: flex-end; }
+  .input-wrap {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+    transition: border var(--transition);
+  }
+  .input-wrap:focus-within { border-color: var(--accent); }
+  #userInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    resize: none;
+    outline: none;
+    max-height: 120px;
+    line-height: 1.5;
+  }
+  #userInput::placeholder { color: var(--text3); }
+
+  #imagePreviewArea {
+    display: none;
+    padding: 6px 8px 0;
+  }
+  #imagePreviewArea img { max-height: 80px; border-radius: 6px; border: 1px solid var(--border2); }
+
+  .btn-send {
+    width: 42px; height: 42px;
+    background: var(--grad);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: opacity var(--transition), transform var(--transition);
+  }
+  .btn-send:hover { opacity: 0.85; transform: scale(1.05); }
+  .btn-send:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .input-hint { font-size: 10.5px; color: var(--text3); text-align: center; margin-top: 6px; }
+
+  /* ── DASHBOARD PANEL ── */
+  .dashboard-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .dash-row { display: grid; gap: 12px; }
+  .dash-row-4 { grid-template-columns: repeat(4, 1fr); }
+  .dash-row-3 { grid-template-columns: repeat(3, 1fr); }
+  .dash-row-2 { grid-template-columns: repeat(2, 1fr); }
+
+  .dash-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color var(--transition);
+  }
+  .dash-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--grad);
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+  .dash-card:hover { border-color: var(--border2); }
+  .dash-card:hover::before { opacity: 1; }
+
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .card-title { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .card-icon  { font-size: 18px; }
+
+  .kpi-val   { font-size: 26px; font-weight: 800; color: var(--text); line-height: 1; }
+  .kpi-delta { font-size: 11px; margin-top: 4px; }
+  .kpi-delta.up   { color: var(--green); }
+  .kpi-delta.down { color: var(--red); }
+
+  /* Mini bar chart */
+  .mini-chart { display: flex; align-items: flex-end; gap: 4px; height: 50px; margin-top: 10px; }
+  .bar {
+    flex: 1;
+    border-radius: 3px 3px 0 0;
+    background: var(--grad);
+    opacity: 0.7;
+    transition: height 0.6s ease, opacity var(--transition);
+    min-height: 4px;
+  }
+  .bar:hover { opacity: 1; }
+
+  /* Sentiment meter */
+  .sentiment-bar-wrap { margin-top: 10px; }
+  .sentiment-labels { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text3); margin-bottom: 5px; }
+  .sentiment-track {
+    height: 8px; border-radius: 99px;
+    background: linear-gradient(90deg, var(--red) 0%, var(--orange) 40%, var(--yellow) 60%, var(--green) 100%);
+    position: relative;
+  }
+  .sentiment-thumb {
+    position: absolute;
+    top: 50%; transform: translate(-50%, -50%);
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--accent);
+    transition: left 0.8s ease;
+  }
+  .sentiment-score { text-align: center; font-size: 22px; font-weight: 800; color: var(--green); margin-top: 8px; }
+
+  /* Hashtag list */
+  .hashtag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .hashtag-tag {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 99px;
+    padding: 4px 10px;
+    font-size: 11.5px;
+    color: var(--accent);
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+  .hashtag-tag:hover { background: rgba(91,141,238,0.15); }
+  .hashtag-count { color: var(--text3); font-size: 10px; margin-left: 3px; }
+
+  /* Posting times */
+  .time-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 8px; }
+  .time-cell {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px;
+    color: var(--text3);
+    transition: background var(--transition);
+  }
+  .time-cell.hot  { background: rgba(91,141,238,0.5); color: #fff; }
+  .time-cell.warm { background: rgba(91,141,238,0.2); color: var(--text2); }
+  .time-cell.cold { background: var(--bg3); }
+
+  /* Campaign cards */
+  .campaign-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .campaign-card:last-child { margin-bottom: 0; }
+  .campaign-icon { font-size: 20px; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .campaign-info { flex: 1; min-width: 0; }
+  .campaign-name { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .campaign-sub  { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .progress-bar  { height: 4px; background: var(--bg); border-radius: 99px; margin-top: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 99px; background: var(--grad); }
+  .campaign-pct  { font-size: 12px; font-weight: 700; color: var(--accent); flex-shrink: 0; }
+
+  /* Competitor table */
+  .comp-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
+  .comp-table th { color: var(--text3); font-weight: 600; text-align: left; padding: 5px 8px; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .comp-table td { padding: 7px 8px; border-top: 1px solid var(--border); color: var(--text2); }
+  .comp-table tr:hover td { background: var(--bg3); }
+  .comp-bar { height: 5px; border-radius: 99px; background: var(--grad); display: inline-block; }
+
+  /* Influencer list */
+  .influencer-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); }
+  .influencer-row:first-child { border-top: none; padding-top: 4px; }
+  .inf-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .inf-info { flex: 1; min-width: 0; }
+  .inf-name  { font-size: 12.5px; font-weight: 600; }
+  .inf-meta  { font-size: 10.5px; color: var(--text3); }
+  .inf-score { font-size: 12px; font-weight: 700; }
+
+  /* Line chart SVG */
+  .svg-chart { width: 100%; overflow: visible; }
+
+  /* ── Notifications ── */
+  #notifContainer { position: fixed; top: 14px; right: 14px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+  .notif {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 12.5px;
+    color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+    animation: slideIn 0.3s ease;
+    max-width: 300px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .notif.success { border-left: 3px solid var(--green); }
+  .notif.error   { border-left: 3px solid var(--red); }
+  .notif.info    { border-left: 3px solid var(--accent); }
+
+  /* ── Spinner overlay ── */
+  #spinner { display: none; position: fixed; inset: 0; background: rgba(13,15,20,0.6); z-index: 9998; align-items: center; justify-content: center; }
+  #spinner.show { display: flex; }
+  .spin-ring { width: 44px; height: 44px; border: 3px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+
+  /* ── Image preview modal ── */
+  #imgModal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.8); z-index: 9997;
+    align-items: center; justify-content: center;
+  }
+  #imgModal.show { display: flex; }
+  #imgModal img { max-width: 90vw; max-height: 90vh; border-radius: var(--radius); }
+
+  /* ── Animations ── */
+  @keyframes fadeUp  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes bounce  { 0%,80%,100%{transform:translateY(0);} 40%{transform:translateY(-6px);} }
+  @keyframes spin    { to { transform:rotate(360deg); } }
+  @keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+  @keyframes pulse   { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+
+  /* ── Responsive ── */
+  @media(max-width:900px){
+    .dash-row-4 { grid-template-columns: repeat(2,1fr); }
+    .dash-row-3 { grid-template-columns: repeat(2,1fr); }
+  }
+  @media(max-width:640px){
+    :root { --sidebar-w: 270px; }
+    .sidebar { position: fixed; top:0;left:0;bottom:0; transform:translateX(0); }
+    .sidebar.collapsed { transform:translateX(-100%); width:var(--sidebar-w); min-width:var(--sidebar-w); }
+    .dash-row-4,.dash-row-3,.dash-row-2 { grid-template-columns: 1fr; }
+    .topbar-meta .meta-badge:not(:first-child) { display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="notifContainer"></div>
+<div id="spinner"><div class="spin-ring"></div></div>
+<div id="imgModal"><img id="imgModalSrc" src="" alt="preview" /></div>
+
+<div class="app">
+
+  <!-- ══════════════ SIDEBAR ══════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-inner">
+
+      <!-- Logo -->
+      <div class="logo-area">
+        <div class="logo-icon">🤖</div>
+        <div class="logo-text">
+          <div class="title">Social AI Agent</div>
+          <div class="sub">IBM Watsonx Powered</div>
+        </div>
+      </div>
+
+      <!-- API Config -->
+      <div class="sb-section">
+        <div class="sb-label">API Configuration</div>
+        <div class="api-card">
+          <label>IBM API Key</label>
+          <input type="password" id="apiKey" placeholder="gsk_..." />
+          <label>Endpoint / Flow URL</label>
+          <input type="url" id="apiEndpoint" placeholder="Leave blank for Groq · or paste Langflow / Watsonx URL" />
+          <label>Model</label>
+          <select id="modelSelect">
+            <optgroup label="── Groq (gsk_ key) ──">
+              <option value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile (Groq)</option>
+              <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant (Groq)</option>
+              <option value="llama3-70b-8192">Llama 3 70B (Groq)</option>
+              <option value="llama3-8b-8192">Llama 3 8B (Groq)</option>
+              <option value="mixtral-8x7b-32768">Mixtral 8x7B (Groq)</option>
+              <option value="gemma2-9b-it">Gemma 2 9B (Groq)</option>
+            </optgroup>
+            <optgroup label="── IBM Watsonx ──">
+              <option value="ibm/granite-3-3-8b-instruct">IBM Granite 3.3 8B Instruct</option>
+              <option value="ibm/granite-3-2-8b-instruct">IBM Granite 3.2 8B Instruct</option>
+              <option value="ibm/granite-13b-instruct-v2">IBM Granite 13B Instruct v2</option>
+              <option value="meta-llama/llama-3-3-70b-instruct">Llama 3.3 70B (Watsonx)</option>
+              <option value="mistralai/mistral-large">Mistral Large (Watsonx)</option>
+            </optgroup>
+          </select>
+          <button class="btn-save" onclick="saveConfig()">💾 Save Configuration</button>
+        </div>
+      </div>
+
+      <!-- Platform Filter -->
+      <div class="sb-section">
+        <div class="sb-label">Platforms</div>
+        <div class="platform-grid">
+          <button class="plat-btn active-x active" id="plat-x" onclick="togglePlatform('x',this)">
+            <span class="icon">𝕏</span> X / Twitter
+          </button>
+          <button class="plat-btn" id="plat-linkedin" onclick="togglePlatform('linkedin',this)">
+            <span class="icon">💼</span> LinkedIn
+          </button>
+          <button class="plat-btn" id="plat-instagram" onclick="togglePlatform('instagram',this)">
+            <span class="icon">📸</span> Instagram
+          </button>
+          <button class="plat-btn" id="plat-facebook" onclick="togglePlatform('facebook',this)">
+            <span class="icon">👥</span> Facebook
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Prompts -->
+      <div class="sb-section">
+        <div class="sb-label">Quick Prompts</div>
+        <div class="quick-prompts">
+          <button class="qp-btn" onclick="sendQuick('Generate 5 engaging tweets about AI trends for this week with hashtags.')">
+            <span class="qp-icon">✍️</span> Generate Tweets
+          </button>
+          <button class="qp-btn" onclick="sendQuick('Write a LinkedIn post announcing a new product launch with a professional tone.')">
+            <span class="qp-icon">📢</span> LinkedIn Post
+          </button>
+          <button class="qp-btn" onclick="sendQuick('Suggest 10 trending hashtags for Instagram in the tech and innovation niche.')">
+            <span class="qp-icon">#️⃣</span> Trending Hashtags
+          </button>
+          <button class="qp-btn" onclick="sendQuick('Create a 4-week social media content calendar for a SaaS startup.')">
+            <span class="qp-icon">📅</span> Content Calendar
+          </button>
+          <button class="qp-btn" onclick="sendQuick('Analyze competitor social media strategies and suggest how I can improve engagement.')">
+            <span class="qp-icon">🔍</span> Competitor Analysis
+          </button>
+          <button class="qp-btn" onclick="sendQuick('Recommend the best posting times for maximum engagement on X, LinkedIn, and Instagram.')">
+            <span class="qp-icon">⏰</span> Best Post Times
+          </button>
+          <button class="qp-btn" onclick="sendQuick('Write 3 Instagram captions for a product photo in a fun and energetic brand tone.')">
+            <span class="qp-icon">🎨</span> Instagram Captions
+          </button>
+          <button class="qp-btn" onclick="sendQuick('Suggest 5 influencer collaboration campaign ideas for a fitness brand.')">
+            <span class="qp-icon">🤝</span> Influencer Ideas
+          </button>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="sb-actions">
+        <button class="btn-new-chat" onclick="newChat()">✨ New Conversation</button>
+        <button class="btn-clear" onclick="clearChat()">🗑️ Clear Chat History</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════════ MAIN ══════════════ -->
+  <div class="main">
+
+    <!-- Top bar -->
+    <div class="topbar">
+      <button class="btn-toggle-sidebar" onclick="toggleSidebar()" title="Toggle Sidebar">☰</button>
+      <div class="topbar-title">🤖 Social Media AI Agent</div>
+      <div class="topbar-meta">
+        <div class="meta-badge">Messages: <span id="msgCount">0</span></div>
+        <div class="meta-badge">~Tokens: <span id="tokenCount">0</span></div>
+        <div class="topbar-status">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusTxt">Ready</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('chat',this)">💬 Chat</button>
+      <button class="tab-btn" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+    </div>
+
+    <!-- CHAT tab -->
+    <div class="tab-panel active" id="tab-chat">
+      <div class="chat-area" id="chatArea">
+        <div class="welcome-card" id="welcomeCard">
+          <div class="welcome-icon">🚀</div>
+          <h2>Welcome to Social Media AI Agent</h2>
+          <p>Your intelligent companion for social media strategy, content creation, campaign planning, and audience engagement — powered by IBM Watsonx Foundation Models.</p>
+          <div class="welcome-chips">
+            <span class="chip" onclick="sendQuick('What can you help me with?')">What can you do?</span>
+            <span class="chip" onclick="sendQuick('Generate a viral tweet about AI in 2025.')">Write a viral tweet</span>
+            <span class="chip" onclick="sendQuick('Analyze the latest social media trends.')">Analyze trends</span>
+            <span class="chip" onclick="sendQuick('Create a brand response strategy for negative comments.')">Brand responses</span>
+            <span class="chip" onclick="sendQuick('Give me engagement improvement tips for LinkedIn.')">LinkedIn tips</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="input-area">
+        <div class="input-toolbar">
+          <button class="tool-btn" onclick="triggerImageUpload()" title="Attach Image">
+            <span class="icon">🖼️</span> Image
+          </button>
+          <button class="tool-btn" id="voiceBtn" onclick="toggleVoice()" title="Voice Input">
+            <span class="icon">🎙️</span> Voice
+          </button>
+          <button class="tool-btn" onclick="exportChat()" title="Export Chat">
+            <span class="icon">📥</span> Export
+          </button>
+          <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageUpload(event)" />
+        </div>
+        <div id="imagePreviewArea">
+          <img id="imagePreview" src="" alt="preview" />
+        </div>
+        <div class="input-row">
+          <div class="input-wrap">
+            <textarea id="userInput" rows="1" placeholder="Ask about social media strategy, content, campaigns…" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          </div>
+          <button class="btn-send" id="sendBtn" onclick="sendMessage()" title="Send">➤</button>
+        </div>
+        <div class="input-hint">Enter to send · Shift+Enter for new line · Powered by IBM Watsonx</div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD tab -->
+    <div class="tab-panel" id="tab-dashboard">
+      <div class="dashboard-area">
+
+        <!-- KPI Row -->
+        <div class="dash-row dash-row-4">
+          <div class="dash-card">
+            <div class="card-header"><span class="card-title">Total Reach</span><span class="card-icon">📡</span></div>
+            <div class="kpi-val">2.4M</div>
+            <div class="kpi-delta up">↑ 18.3% this week</div>
+            <div class="mini-chart" id="reachChart"></div>
+          </div>
+          <div class="dash-card">
+            <div class="card-header"><span class="card-title">Engagements</span><span class="card-icon">❤️</span></div>
+            <div class="kpi-val">187K</div>
+            <div class="kpi-delta up">↑ 9.7% this week</div>
+            <div class="mini-chart" id="engChart"></div>
+          </div>
+          <div class="dash-card">
+            <div class="card-header"><span class="card-title">New Followers</span><span class="card-icon">👥</span></div>
+            <div class="kpi-val">12.1K</div>
+            <div class="kpi-delta up">↑ 4.2% this week</div>
+            <div class="mini-chart" id="follChart"></div>
+          </div>
+          <div class="dash-card">
+            <div class="card-header"><span class="card-title">Impressions</span><span class="card-icon">👁️</span></div>
+            <div class="kpi-val">5.8M</div>
+            <div class="kpi-delta down">↓ 2.1% this week</div>
+            <div class="mini-chart" id="impChart"></div>
+          </div>
+        </div>
+
+        <!-- Engagement trend + Sentiment -->
+        <div class="dash-row dash-row-2">
+          <div class="dash-card">
+            <div class="card-header"><span class="card-title">Engagement Trend (30 days)</span><span class="card-icon">📈</span></div>
+            <svg class="svg-chart" id="trendChart" height="100" viewBox="0 0 400 100"></svg>
+          </div>
+          <div class="dash-card">
+            <div class="card-header"><span class="card-title">Audience Sentiment</span><span class="card-icon">🎭</span></div>
+            <div class="sentiment-bar-wrap">
+              <div class="sentiment-labels"><span>Negative</span><span>Neutral</span><span>Positive</span></div>
+              <div class="sentiment-track"><div class="sentiment-thumb" id="sentimentThumb"></div></div>
+            </div>
+            <div class="sentiment-score" id="sentimentScore">74%</div>
+            <div style="text-align:center;font-size:11px;color:var(--text3);margin-top:2px;">Overall positive sentiment</div>
+          </div>
+        </div>
+
+        <!-- Hashtags + Best Times -->
+        <div class="dash-row dash-row-2">
+          <div class="dash-card">
+            <div class="card-header"><span class="card-title">Trending Hashtags</span><span class="card-icon">#️⃣</span></div>
+            <div class="hashtag-list" id="hashtagList"></div>
+          </div>
+          <div class="dash-card">
+            <div class="card-header"><span class="card-title">Best Posting Times</span><span class="card-icon">⏰</span></div>
+            <div style="font-size:10.5px;color:var(--text3);margin-bottom:4px;">Mon — Sun · Hover for engagement score</div>
+            <div class="time-grid" id="timeGrid"></div>
+          </div>
+        </div>
+
+        <!-- Campaigns + Influencers + Competitors -->
+        <div class="dash-row dash-row-3">
+          <div class="dash-card">
+            <div class="card-header"><span class="card-title">Active Campaigns</span><span class="card-icon">🚀</span></div>
+            <div id="campaignList"></div>
+          </div>
+          <div class="dash-card">
+            <div class="card-header"><span class="card-title">Influencer Activity</span><span class="card-icon">⭐</span></div>
+            <div id="influencerList"></div>
+          </div>
+          <div class="dash-card">
+            <div class="card-header"><span class="card-title">Competitor Engagement</span><span class="card-icon">🔍</span></div>
+            <table class="comp-table" id="compTable">
+              <thead><tr><th>Brand</th><th>Eng. Rate</th><th>Score</th></tr></thead>
+              <tbody id="compBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+/* ════════════════════════════════════════
+   STATE
+════════════════════════════════════════ */
+const state = {
+  messages: [],
+  msgCount: 0,
+  tokenCount: 0,
+  activePlatforms: new Set(['x']),
+  isTyping: false,
+  isRecording: false,
+  recognition: null,
+  uploadedImage: null,
+  sidebarOpen: true,
+  activeTab: 'chat',
+};
+
+const SYSTEM_PROMPT = `You are an expert Social Media AI Agent powered by IBM Watsonx Foundation Models. Your role is to assist users with:
+- Social media strategy and planning
+- Content creation (posts, captions, threads, stories)
+- Campaign planning and execution
+- Audience engagement and community management
+- Competitor analysis and benchmarking
+- Hashtag research and trending topic analysis
+- Posting schedule optimization
+- Sentiment analysis and brand reputation management
+- Influencer marketing strategies
+- Brand communication and tone management
+- Cross-platform content adaptation (X/Twitter, LinkedIn, Instagram, Facebook)
+- Content calendar creation
+- ROI measurement and KPI tracking
+
+Always provide:
+1. Actionable, creative, and data-driven recommendations
+2. Platform-specific advice tailored to each social network
+3. Professional yet engaging language
+4. Specific examples, templates, or formats when requested
+5. Measurable goals and success metrics
+
+Maintain the user's desired brand tone and always prioritize authentic engagement over vanity metrics.`;
+
+/* ════════════════════════════════════════
+   INIT
+════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  loadConfig();
+  loadChatHistory();
+  renderDashboard();
+  initVoice();
+
+  setTimeout(() => setSentiment(74), 600);
+  setTimeout(() => buildTrendChart(), 300);
+  buildMiniBars();
+  buildHashtags();
+  buildTimeGrid();
+  buildCampaigns();
+  buildInfluencers();
+  buildCompetitors();
+});
+
+/* ════════════════════════════════════════
+   CONFIG / LOCALSTORAGE
+════════════════════════════════════════ */
+function saveConfig() {
+  const key = document.getElementById('apiKey').value.trim();
+  const ep  = document.getElementById('apiEndpoint').value.trim();
+  const mdl = document.getElementById('modelSelect').value;
+  if (!key) { showNotif('Please enter an IBM API Key', 'error'); return; }
+  localStorage.setItem('ibm_api_key', key);
+  localStorage.setItem('ibm_endpoint', ep);
+  localStorage.setItem('ibm_model', mdl);
+  showNotif('Configuration saved!', 'success');
+  updateStatus(true);
+}
+
+function loadConfig() {
+  const key = localStorage.getItem('ibm_api_key') || '';
+  const ep  = localStorage.getItem('ibm_endpoint') || '';
+  let mdl   = localStorage.getItem('ibm_model') || 'llama-3.3-70b-versatile';
+
+  // Auto-fix: if key is a Groq key (gsk_) but stored model is an IBM path, reset to best Groq model
+  const isGroqKey    = key.startsWith('gsk_');
+  const isIBMModel   = mdl.startsWith('ibm/') || mdl.startsWith('meta-llama/') || mdl.startsWith('mistralai/');
+  const noEndpoint   = !ep || (!ep.includes('watsonx') && !ep.includes('langflow'));
+  if (isGroqKey && isIBMModel && noEndpoint) {
+    mdl = 'llama-3.3-70b-versatile';
+    localStorage.setItem('ibm_model', mdl);
+  }
+
+  document.getElementById('apiKey').value = key;
+  document.getElementById('apiEndpoint').value = ep;
+  document.getElementById('modelSelect').value = mdl;
+  if (key) updateStatus(true);
+
+  const plats = JSON.parse(localStorage.getItem('ibm_platforms') || '["x"]');
+  state.activePlatforms = new Set(plats);
+  plats.forEach(p => {
+    const btn = document.getElementById('plat-' + p);
+    if (btn) { btn.classList.add('active', 'active-' + p); }
+  });
+}
+
+function savePlatforms() {
+  localStorage.setItem('ibm_platforms', JSON.stringify([...state.activePlatforms]));
+}
+
+function saveChatHistory() {
+  localStorage.setItem('ibm_chat_history', JSON.stringify(state.messages.slice(-60)));
+}
+
+function loadChatHistory() {
+  const h = localStorage.getItem('ibm_chat_history');
+  if (!h) return;
+  const msgs = JSON.parse(h);
+  if (!msgs.length) return;
+  hideWelcome();
+  msgs.forEach(m => appendMessage(m.role, m.content, m.timestamp, false));
+  state.messages = msgs;
+  updateCounters();
+}
+
+/* ════════════════════════════════════════
+   PLATFORM TOGGLE
+════════════════════════════════════════ */
+function togglePlatform(id, btn) {
+  if (state.activePlatforms.has(id)) {
+    if (state.activePlatforms.size === 1) { showNotif('At least one platform must be selected', 'info'); return; }
+    state.activePlatforms.delete(id);
+    btn.classList.remove('active', 'active-' + id);
+  } else {
+    state.activePlatforms.add(id);
+    btn.classList.add('active', 'active-' + id);
+  }
+  savePlatforms();
+  showNotif('Platforms updated: ' + [...state.activePlatforms].join(', '), 'info');
+}
+
+/* ════════════════════════════════════════
+   SIDEBAR / TABS
+════════════════════════════════════════ */
+function toggleSidebar() {
+  state.sidebarOpen = !state.sidebarOpen;
+  document.getElementById('sidebar').classList.toggle('collapsed', !state.sidebarOpen);
+}
+
+function switchTab(tabName, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + tabName).classList.add('active');
+  state.activeTab = tabName;
+}
+
+/* ════════════════════════════════════════
+   CHAT
+════════════════════════════════════════ */
+function hideWelcome() {
+  const w = document.getElementById('welcomeCard');
+  if (w) w.style.display = 'none';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+async function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text  = input.value.trim();
+  if (!text && !state.uploadedImage) return;
+  if (state.isTyping) return;
+
+  const apiKey = localStorage.getItem('ibm_api_key');
+  if (!apiKey) { showNotif('Please configure your IBM API Key in the sidebar first.', 'error'); return; }
+
+  hideWelcome();
+  const userText = text || '[Image attached]';
+  input.value = '';
+  input.style.height = 'auto';
+
+  clearImagePreview();
+
+  const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  appendMessage('user', userText, ts, true);
+
+  state.messages.push({ role: 'user', content: userText, timestamp: ts });
+  updateCounters();
+  saveChatHistory();
+  showTyping();
+
+  try {
+    const response = await callIBMAPI(userText);
+    hideTyping();
+    const ats = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    appendMessage('assistant', response, ats, true);
+    state.messages.push({ role: 'assistant', content: response, timestamp: ats });
+    updateCounters();
+    saveChatHistory();
+  } catch (err) {
+    hideTyping();
+    const errMsg = `⚠️ **API Error:** ${err.message}\n\nPlease check your IBM API Key and Endpoint in the sidebar configuration.`;
+    const ats = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    appendMessage('assistant', errMsg, ats, true);
+    showNotif('API call failed: ' + err.message, 'error');
+    updateStatus(false);
+  }
+}
+
+function sendQuick(prompt) {
+  document.getElementById('userInput').value = prompt;
+  autoResize(document.getElementById('userInput'));
+  switchTab('chat', document.querySelectorAll('.tab-btn')[0]);
+  sendMessage();
+}
+
+/* ════════════════════════════════════════
+   IBM API CALL
+════════════════════════════════════════ */
+async function callIBMAPI(userMessage) {
+  const apiKey  = localStorage.getItem('ibm_api_key') || '';
+  const endpoint = localStorage.getItem('ibm_endpoint') || '';
+  const model   = localStorage.getItem('ibm_model') || 'llama-3.3-70b-versatile';
+
+  const platforms = [...state.activePlatforms].join(', ');
+  const sysPrompt = SYSTEM_PROMPT + `\n\nCurrently active social media platforms for this session: ${platforms}.`;
+
+  const conversationHistory = state.messages.slice(-10).map(m => ({
+    role: m.role,
+    content: m.content
+  }));
+
+  // Build messages array
+  const messages = [
+    { role: 'system', content: sysPrompt },
+    ...conversationHistory,
+    { role: 'user', content: userMessage }
+  ];
+
+  // Determine request format: Langflow endpoint or direct Watsonx/OpenAI-compatible
+  let fetchUrl, fetchOptions;
+
+  if (endpoint && endpoint.includes('langflow')) {
+    // IBM Langflow / DataStax Astra Langflow format
+    fetchUrl = endpoint;
+    fetchOptions = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        input_value: userMessage,
+        output_type: 'chat',
+        input_type: 'chat',
+        tweaks: {}
+      })
+    };
+  } else if (endpoint && endpoint.includes('watsonx')) {
+    // IBM Watsonx.ai direct API
+    fetchUrl = endpoint;
+    fetchOptions = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model_id: model,
+        input: messages.map(m => `${m.role}: ${m.content}`).join('\n'),
+        parameters: {
+          decoding_method: 'greedy',
+          max_new_tokens: 1024,
+          temperature: 0.7,
+          repetition_penalty: 1.1
+        }
+      })
+    };
+  } else {
+    // Default: OpenAI-compatible endpoint (Groq, IBM Orchestrate, etc.)
+    const baseUrl = endpoint || 'https://api.groq.com/openai/v1';
+    fetchUrl = baseUrl.replace(/\/$/, '') + '/chat/completions';
+    fetchOptions = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: messages,
+        max_tokens: 1024,
+        temperature: 0.7,
+        stream: false
+      })
+    };
+  }
+
+  const res = await fetch(fetchUrl, fetchOptions);
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`HTTP ${res.status}: ${errBody.substring(0, 200)}`);
+  }
+
+  const data = await res.json();
+
+  // Parse response based on format
+  let content = '';
+  if (data.outputs) {
+    // Langflow format
+    const output = data.outputs?.[0]?.outputs?.[0];
+    content = output?.results?.message?.text
+      || output?.artifacts?.message
+      || output?.outputs?.[0]?.results?.message?.text
+      || JSON.stringify(data);
+  } else if (data.results) {
+    // Watsonx direct format
+    content = data.results?.[0]?.generated_text || JSON.stringify(data);
+  } else if (data.choices) {
+    // OpenAI-compatible format
+    content = data.choices?.[0]?.message?.content || JSON.stringify(data);
+    if (data.usage) {
+      state.tokenCount += data.usage.total_tokens || 0;
+      document.getElementById('tokenCount').textContent = state.tokenCount.toLocaleString();
+    }
+  } else {
+    content = JSON.stringify(data, null, 2);
+  }
+
+  return content || 'No response received from the model.';
+}
+
+/* ════════════════════════════════════════
+   MESSAGE RENDERING
+════════════════════════════════════════ */
+function appendMessage(role, content, timestamp, scroll) {
+  const chatArea = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+
+  const avatar = role === 'user' ? '👤' : '🤖';
+  const label  = role === 'user' ? 'You' : 'AI Agent';
+
+  div.innerHTML = `
+    <div class="msg-avatar">${avatar}</div>
+    <div class="msg-content">
+      <div class="msg-meta">
+        <strong style="color:var(--text2)">${label}</strong>
+        <span>${timestamp}</span>
+      </div>
+      <div class="msg-bubble">${formatContent(content)}</div>
+      <div class="msg-actions">
+        <button class="msg-action-btn" onclick="copyMsg(this)">📋 Copy</button>
+        ${role === 'assistant' ? '<button class="msg-action-btn" onclick="regenerate()">🔄 Regenerate</button>' : ''}
+      </div>
+    </div>
+  `;
+
+  chatArea.appendChild(div);
+  if (scroll) chatArea.scrollTop = chatArea.scrollHeight;
+  state.msgCount++;
+}
+
+function formatContent(text) {
+  if (!text) return '';
+  // Escape HTML
+  let s = text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  // Code blocks
+  s = s.replace(/```[\w]*\n([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+  // Inline code
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // Bold
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // Italic
+  s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  // H3
+  s = s.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  // Unordered lists
+  s = s.replace(/^[\-\*] (.+)$/gm, '<li>$1</li>');
+  s = s.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+  // Numbered lists
+  s = s.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+  // Line breaks
+  s = s.replace(/\n/g, '<br/>');
+
+  return s;
+}
+
+function updateCounters() {
+  document.getElementById('msgCount').textContent = state.messages.length;
+  // Estimate tokens (~4 chars per token)
+  if (!state.tokenCount) {
+    const totalChars = state.messages.reduce((a, m) => a + m.content.length, 0);
+    document.getElementById('tokenCount').textContent = Math.round(totalChars / 4).toLocaleString();
+  }
+}
+
+/* ════════════════════════════════════════
+   TYPING INDICATOR
+════════════════════════════════════════ */
+function showTyping() {
+  state.isTyping = true;
+  document.getElementById('sendBtn').disabled = true;
+  updateStatus(true, 'Generating…');
+
+  const chatArea = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'typing-indicator';
+  div.id = 'typingIndicator';
+  div.innerHTML = `
+    <div class="msg-avatar">🤖</div>
+    <div class="typing-dots"><span></span><span></span><span></span></div>
+  `;
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function hideTyping() {
+  state.isTyping = false;
+  document.getElementById('sendBtn').disabled = false;
+  updateStatus(true, 'Ready');
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+/* ════════════════════════════════════════
+   CHAT ACTIONS
+════════════════════════════════════════ */
+function newChat() {
+  state.messages = [];
+  state.msgCount = 0;
+  state.tokenCount = 0;
+  document.getElementById('chatArea').innerHTML = `
+    <div class="welcome-card" id="welcomeCard">
+      <div class="welcome-icon">🚀</div>
+      <h2>Welcome to Social Media AI Agent</h2>
+      <p>Your intelligent companion for social media strategy, content creation, campaign planning, and audience engagement — powered by IBM Watsonx Foundation Models.</p>
+      <div class="welcome-chips">
+        <span class="chip" onclick="sendQuick('What can you help me with?')">What can you do?</span>
+        <span class="chip" onclick="sendQuick('Generate a viral tweet about AI in 2025.')">Write a viral tweet</span>
+        <span class="chip" onclick="sendQuick('Analyze the latest social media trends.')">Analyze trends</span>
+        <span class="chip" onclick="sendQuick('Create a brand response strategy for negative comments.')">Brand responses</span>
+        <span class="chip" onclick="sendQuick('Give me engagement improvement tips for LinkedIn.')">LinkedIn tips</span>
+      </div>
+    </div>`;
+  localStorage.removeItem('ibm_chat_history');
+  updateCounters();
+  showNotif('New conversation started!', 'success');
+}
+
+function clearChat() {
+  if (!state.messages.length) { showNotif('Chat is already empty.', 'info'); return; }
+  newChat();
+  showNotif('Chat history cleared.', 'success');
+}
+
+function copyMsg(btn) {
+  const bubble = btn.closest('.msg-content').querySelector('.msg-bubble');
+  const text = bubble.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✅ Copied';
+    setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+  });
+}
+
+function regenerate() {
+  const last = state.messages.filter(m => m.role === 'user').slice(-1)[0];
+  if (!last) return;
+  // Remove last assistant message visually
+  const msgs = document.querySelectorAll('.msg.assistant');
+  if (msgs.length) msgs[msgs.length - 1].remove();
+  state.messages = state.messages.filter((_, i) => i < state.messages.length - 1 || state.messages[i].role !== 'assistant');
+  document.getElementById('userInput').value = last.content;
+  sendMessage();
+}
+
+function exportChat() {
+  if (!state.messages.length) { showNotif('No messages to export.', 'info'); return; }
+  const lines = state.messages.map(m => `[${m.timestamp}] ${m.role.toUpperCase()}: ${m.content}`);
+  const blob = new Blob([lines.join('\n\n')], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `social-ai-chat-${Date.now()}.txt`;
+  a.click();
+  showNotif('Chat exported!', 'success');
+}
+
+/* ════════════════════════════════════════
+   IMAGE UPLOAD
+════════════════════════════════════════ */
+function triggerImageUpload() {
+  document.getElementById('imageInput').click();
+}
+
+function handleImageUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    state.uploadedImage = ev.target.result;
+    const prev = document.getElementById('imagePreviewArea');
+    const img  = document.getElementById('imagePreview');
+    img.src = ev.target.result;
+    prev.style.display = 'block';
+    img.onclick = () => {
+      document.getElementById('imgModalSrc').src = ev.target.result;
+      document.getElementById('imgModal').classList.add('show');
+    };
+    showNotif('Image attached (preview only).', 'info');
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImagePreview() {
+  state.uploadedImage = null;
+  document.getElementById('imagePreviewArea').style.display = 'none';
+  document.getElementById('imagePreview').src = '';
+  document.getElementById('imageInput').value = '';
+}
+
+document.getElementById('imgModal').addEventListener('click', () => {
+  document.getElementById('imgModal').classList.remove('show');
+});
+
+/* ════════════════════════════════════════
+   VOICE INPUT
+════════════════════════════════════════ */
+function initVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) return;
+  state.recognition = new SpeechRecognition();
+  state.recognition.continuous = false;
+  state.recognition.interimResults = false;
+  state.recognition.lang = 'en-US';
+  state.recognition.onresult = (e) => {
+    const transcript = e.results[0][0].transcript;
+    document.getElementById('userInput').value = transcript;
+    autoResize(document.getElementById('userInput'));
+    stopVoice();
+    showNotif('Voice captured!', 'success');
+  };
+  state.recognition.onerror = () => { stopVoice(); };
+  state.recognition.onend = () => { stopVoice(); };
+}
+
+function toggleVoice() {
+  if (!state.recognition) { showNotif('Voice not supported in this browser.', 'error'); return; }
+  if (state.isRecording) stopVoice(); else startVoice();
+}
+
+function startVoice() {
+  state.isRecording = true;
+  state.recognition.start();
+  const btn = document.getElementById('voiceBtn');
+  btn.classList.add('active');
+  btn.innerHTML = '<span class="icon">🔴</span> Recording…';
+  showNotif('Listening… Speak now.', 'info');
+}
+
+function stopVoice() {
+  state.isRecording = false;
+  if (state.recognition) try { state.recognition.stop(); } catch(e) {}
+  const btn = document.getElementById('voiceBtn');
+  btn.classList.remove('active');
+  btn.innerHTML = '<span class="icon">🎙️</span> Voice';
+}
+
+/* ════════════════════════════════════════
+   STATUS
+════════════════════════════════════════ */
+function updateStatus(online, text) {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusTxt');
+  dot.className = 'status-dot' + (online ? '' : ' offline');
+  txt.textContent = text || (online ? 'Ready' : 'Offline');
+}
+
+/* ════════════════════════════════════════
+   NOTIFICATIONS
+════════════════════════════════════════ */
+function showNotif(msg, type = 'info') {
+  const c = document.getElementById('notifContainer');
+  const el = document.createElement('div');
+  el.className = `notif ${type}`;
+  const icons = { success:'✅', error:'❌', info:'ℹ️' };
+  el.innerHTML = `${icons[type] || 'ℹ️'} ${msg}`;
+  c.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; el.style.transform='translateX(20px)'; el.style.transition='0.3s'; setTimeout(() => el.remove(), 300); }, 3500);
+}
+
+/* ════════════════════════════════════════
+   DASHBOARD
+════════════════════════════════════════ */
+function renderDashboard() {}
+
+function buildMiniBars() {
+  const datasets = {
+    reachChart: [40,55,45,70,60,80,75,90,85,95,88,100],
+    engChart:   [30,45,50,40,65,55,70,60,80,75,85,78],
+    follChart:  [20,30,25,40,35,50,45,60,55,70,65,80],
+    impChart:   [60,50,70,55,80,65,75,70,60,85,80,90],
+  };
+  Object.entries(datasets).forEach(([id, data]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const max = Math.max(...data);
+    data.forEach(v => {
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      bar.style.height = (v / max * 100) + '%';
+      bar.title = v;
+      el.appendChild(bar);
+    });
+  });
+}
+
+function buildTrendChart() {
+  const svg = document.getElementById('trendChart');
+  if (!svg) return;
+  const W = 400, H = 100;
+  const data = [20,35,28,50,42,65,58,72,68,80,75,85,78,92,88,95,90,100,96,88,92,85,98,90,95,100,88,93,97,100];
+  const max = Math.max(...data);
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * W;
+    const y = H - (v / max) * (H - 10) - 2;
+    return `${x},${y}`;
+  });
+  const polyline = pts.join(' ');
+  const areaPath = `M${pts[0]} ${pts.slice(1).map(p => 'L'+p).join(' ')} L${W},${H} L0,${H} Z`;
+
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="lg1" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#5b8dee" stop-opacity="0.4"/>
+        <stop offset="100%" stop-color="#5b8dee" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <path d="${areaPath}" fill="url(#lg1)" />
+    <polyline points="${polyline}" fill="none" stroke="#5b8dee" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="${(data.length-1)/(data.length-1)*W}" cy="${H - (data[data.length-1]/max)*(H-10)-2}" r="4" fill="#5b8dee"/>
+  `;
+}
+
+function setSentiment(score) {
+  document.getElementById('sentimentThumb').style.left = score + '%';
+  document.getElementById('sentimentScore').textContent = score + '%';
+}
+
+function buildHashtags() {
+  const tags = [
+    { tag: '#AIMarketing', count: '124K' },
+    { tag: '#SocialMedia2025', count: '98K' },
+    { tag: '#ContentStrategy', count: '87K' },
+    { tag: '#DigitalMarketing', count: '76K' },
+    { tag: '#BrandGrowth', count: '65K' },
+    { tag: '#EngagementTips', count: '54K' },
+    { tag: '#IBMWatsonx', count: '43K' },
+    { tag: '#TechTrends', count: '38K' },
+    { tag: '#MarketingAI', count: '32K' },
+    { tag: '#ViralContent', count: '28K' },
+  ];
+  const el = document.getElementById('hashtagList');
+  if (!el) return;
+  tags.forEach(t => {
+    const span = document.createElement('span');
+    span.className = 'hashtag-tag';
+    span.innerHTML = `${t.tag}<span class="hashtag-count">${t.count}</span>`;
+    span.onclick = () => sendQuick(`Analyze the hashtag ${t.tag} and suggest how to use it effectively in my social media strategy.`);
+    el.appendChild(span);
+  });
+}
+
+function buildTimeGrid() {
+  const el = document.getElementById('timeGrid');
+  if (!el) return;
+  const days = ['M','T','W','T','F','S','S'];
+  const hours = ['6a','9a','12p','3p','6p','9p','11p'];
+  // Create header row
+  days.forEach(d => {
+    const c = document.createElement('div');
+    c.className = 'time-cell';
+    c.textContent = d;
+    c.style.color = 'var(--text3)';
+    c.style.fontWeight = '600';
+    c.style.background = 'transparent';
+    el.appendChild(c);
+  });
+  // Heatmap data [day][hour] engagement level 0-2
+  const heatmap = [
+    [0,1,2,1,2,1,0],
+    [0,2,2,1,2,2,0],
+    [0,1,2,2,1,1,0],
+    [0,2,1,1,2,1,0],
+    [1,2,2,1,1,2,0],
+    [0,1,1,2,2,1,0],
+    [1,2,0,1,2,2,1],
+  ];
+  hours.forEach((h, hi) => {
+    days.forEach((d, di) => {
+      const c = document.createElement('div');
+      const level = heatmap[hi][di];
+      c.className = 'time-cell ' + ['cold','warm','hot'][level];
+      c.title = `${d} ${h}: ${['Low','Medium','High'][level]} engagement`;
+      c.textContent = h;
+      el.appendChild(c);
+    });
+  });
+}
+
+function buildCampaigns() {
+  const campaigns = [
+    { icon: '🚀', bg: 'rgba(91,141,238,0.15)', name: 'AI Product Launch', sub: 'X · LinkedIn', pct: 72 },
+    { icon: '🎨', bg: 'rgba(124,92,216,0.15)', name: 'Summer Brand Refresh', sub: 'Instagram · Facebook', pct: 45 },
+    { icon: '🤝', bg: 'rgba(62,207,207,0.15)', name: 'Influencer Collab Q3', sub: 'All Platforms', pct: 88 },
+  ];
+  const el = document.getElementById('campaignList');
+  if (!el) return;
+  campaigns.forEach(c => {
+    el.innerHTML += `
+      <div class="campaign-card">
+        <div class="campaign-icon" style="background:${c.bg}">${c.icon}</div>
+        <div class="campaign-info">
+          <div class="campaign-name">${c.name}</div>
+          <div class="campaign-sub">${c.sub}</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${c.pct}%"></div></div>
+        </div>
+        <div class="campaign-pct">${c.pct}%</div>
+      </div>`;
+  });
+}
+
+function buildInfluencers() {
+  const influencers = [
+    { avatar: '🧑‍💻', bg: 'rgba(91,141,238,0.2)', name: '@techguru', meta: '2.4M followers · Tech', score: '9.8', col: 'var(--green)' },
+    { avatar: '👩‍🎨', bg: 'rgba(228,64,95,0.2)', name: '@creativediva', meta: '890K followers · Design', score: '8.5', col: 'var(--accent)' },
+    { avatar: '🧑‍💼', bg: 'rgba(10,102,194,0.2)', name: '@bizleader', meta: '1.1M followers · Business', score: '9.2', col: 'var(--accent3)' },
+    { avatar: '📱', bg: 'rgba(62,207,207,0.2)', name: '@socialmaven', meta: '670K followers · Marketing', score: '8.9', col: 'var(--orange)' },
+  ];
+  const el = document.getElementById('influencerList');
+  if (!el) return;
+  influencers.forEach(inf => {
+    el.innerHTML += `
+      <div class="influencer-row">
+        <div class="inf-avatar" style="background:${inf.bg}">${inf.avatar}</div>
+        <div class="inf-info">
+          <div class="inf-name">${inf.name}</div>
+          <div class="inf-meta">${inf.meta}</div>
+        </div>
+        <div class="inf-score" style="color:${inf.col}">${inf.score}</div>
+      </div>`;
+  });
+}
+
+function buildCompetitors() {
+  const comps = [
+    { name: 'CompetitorA', rate: '4.8%', w: 48 },
+    { name: 'CompetitorB', rate: '3.2%', w: 32 },
+    { name: 'CompetitorC', rate: '6.1%', w: 61 },
+    { name: 'CompetitorD', rate: '2.9%', w: 29 },
+    { name: 'Your Brand',  rate: '5.4%', w: 54 },
+  ];
+  const tbody = document.getElementById('compBody');
+  if (!tbody) return;
+  comps.forEach(c => {
+    const isYou = c.name === 'Your Brand';
+    tbody.innerHTML += `
+      <tr style="${isYou ? 'background:rgba(91,141,238,0.08)' : ''}">
+        <td style="${isYou ? 'color:var(--accent);font-weight:700' : ''}">${c.name}</td>
+        <td>${c.rate}</td>
+        <td><span class="comp-bar" style="width:${c.w}px"></span></td>
+      </tr>`;
+  });
+}
+</script>
+</body>
+</html>
